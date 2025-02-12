@@ -156,24 +156,41 @@ export default function Dashboard() {
             <CardTitle>Stream Settings</CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={form.handleSubmit((data) => updateSettingsMutation.mutate(data))} className="space-y-4">
-              <div className="space-y-2">
-                <Input
-                  type="password"
-                  placeholder="YouTube Stream Key"
-                  {...form.register("youtubeStreamKey")}
-                />
-                {form.formState.errors.youtubeStreamKey && (
-                  <p className="text-sm text-red-500">
-                    {form.formState.errors.youtubeStreamKey.message}
-                  </p>
-                )}
+            {!streamSettings?.youtubeStreamKey ? (
+              <form onSubmit={form.handleSubmit((data) => updateSettingsMutation.mutate(data))} className="space-y-4">
+                <div className="space-y-2">
+                  <Input
+                    type="password"
+                    placeholder="YouTube Stream Key"
+                    {...form.register("youtubeStreamKey")}
+                  />
+                  {form.formState.errors.youtubeStreamKey && (
+                    <p className="text-sm text-red-500">
+                      {form.formState.errors.youtubeStreamKey.message}
+                    </p>
+                  )}
+                </div>
+                <Button type="submit" disabled={updateSettingsMutation.isPending}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Save Stream Key
+                </Button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Stream key is configured. To change it, click the button below.
+                </p>
+                <Button 
+                  onClick={() => {
+                    updateSettingsMutation.mutate({ youtubeStreamKey: '' });
+                    form.reset({ youtubeStreamKey: '' });
+                  }}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Change Stream Key
+                </Button>
               </div>
-              <Button type="submit" disabled={updateSettingsMutation.isPending}>
-                <Settings className="mr-2 h-4 w-4" />
-                Save Settings
-              </Button>
-            </form>
+            )}
           </CardContent>
         </Card>
       </div>

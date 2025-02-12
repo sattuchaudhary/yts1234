@@ -54,9 +54,10 @@ export async function startStreaming() {
       ffmpegProcess.kill();
     }
 
-    // Use better FFmpeg settings for YouTube streaming
+    // Use better FFmpeg settings for YouTube streaming with loop
     ffmpegProcess = spawn('ffmpeg', [
       '-re',  // Read input at native frame rate
+      '-stream_loop', '-1', // Loop the input infinitely
       '-i', activeVideo.filePath,
       '-c:v', 'libx264', // Use H.264 codec
       '-preset', 'veryfast', // Fast encoding
