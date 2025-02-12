@@ -39,3 +39,12 @@ export async function startStream(): Promise<void> {
 export async function stopStream(): Promise<void> {
   await apiRequest("POST", "/api/stream/stop");
 }
+
+export async function deleteVideo(id: number): Promise<void> {
+  await apiRequest("DELETE", `/api/videos/${id}`);
+}
+
+export async function setVideoActive({ id, active }: { id: number; active: boolean }): Promise<Video> {
+  const res = await apiRequest("PUT", `/api/videos/${id}/active`, { active });
+  return res.json();
+}
