@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertVideoSchema } from "@shared/schema";
+import { insertVideoSchema, type InsertVideo } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,18 +19,22 @@ export default function UploadPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<string>("");
 
-  const form = useForm({
+  const form = useForm<InsertVideo>({
     resolver: zodResolver(insertVideoSchema),
     defaultValues: {
       title: "",
       description: "",
+      filePath: undefined,
     },
   });
 
-  async function onSubmit(data: { title: string; description: string }) {
+  async function onSubmit(data: InsertVideo) {
+    console.log("Form submitted with data:", data);
+    console.log("Selected file:", selectedFile);
+
     if (!selectedFile) {
       toast({
-        title: "Error",
+        title: "त्रुटि",
         description: "कृपया एक वीडियो फ़ाइल चुनें",
         variant: "destructive",
       });
@@ -39,7 +43,7 @@ export default function UploadPage() {
 
     if (!selectedFile.type.startsWith('video/')) {
       toast({
-        title: "Error",
+        title: "त्रुटि",
         description: "कृपया एक वैध वीडियो फ़ाइल चुनें",
         variant: "destructive",
       });
@@ -56,7 +60,12 @@ export default function UploadPage() {
       formData.append("video", selectedFile);
 
       setUploadProgress("वीडियो अपलोड हो रहा है...");
-      console.log("Uploading video:", selectedFile.name);
+      console.log("Starting upload with FormData:", {
+        title: data.title,
+        description: data.description,
+        fileName: selectedFile.name,
+        fileSize: selectedFile.size,
+      });
 
       const video = await uploadVideo(formData);
       console.log("Upload successful:", video);
@@ -88,6 +97,11 @@ export default function UploadPage() {
     }
   };
 
+  console.log("Form state:", {
+    isSubmitting: form.formState.isSubmitting,
+    errors: form.formState.errors,
+  });
+
   return (
     <div className="container mx-auto p-6">
       <Link href="/">
@@ -102,7 +116,14 @@ export default function UploadPage() {
           <CardTitle>वीडियो अपलोड करें</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              console.log("Form submission started");
+              form.handleSubmit(onSubmit)(e);
+            }} 
+            className="space-y-4"
+          >
             <div className="space-y-2">
               <Input
                 placeholder="वीडियो का शीर्षक"

@@ -17,11 +17,18 @@ export const streamSettings = pgTable("stream_settings", {
   active: boolean("active").default(false),
 });
 
-export const insertVideoSchema = createInsertSchema(videos).omit({
-  id: true,
-  uploadedAt: true,
-  active: true,
-});
+// Modified schema to be more lenient with the file path
+export const insertVideoSchema = createInsertSchema(videos)
+  .omit({
+    id: true,
+    uploadedAt: true,
+    active: true,
+  })
+  .extend({
+    title: z.string().min(1, "शीर्षक आवश्यक है"),
+    description: z.string().optional(),
+    filePath: z.string().optional(), // Make filePath optional since it's handled by multer
+  });
 
 export const insertStreamSettingsSchema = createInsertSchema(streamSettings).omit({
   id: true,
