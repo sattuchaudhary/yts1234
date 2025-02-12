@@ -1,7 +1,5 @@
 import NodeMediaServer from "node-media-server";
 import { storage } from "./storage";
-import fs from "fs/promises";
-import path from "path";
 import { spawn } from "child_process";
 
 let nms: NodeMediaServer;
@@ -48,18 +46,27 @@ export async function startStreaming() {
 
   // Start RTMP stream to YouTube using ffmpeg
   const rtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${settings.youtubeStreamKey}`;
+  console.log("Starting stream to:", rtmpUrl);
+  console.log("Using video file:", activeVideo.filePath);
 
   try {
     if (ffmpegProcess) {
       ffmpegProcess.kill();
     }
 
+    // Use better FFmpeg settings for YouTube streaming
     ffmpegProcess = spawn('ffmpeg', [
-      '-re',
+      '-re',  // Read input at native frame rate
       '-i', activeVideo.filePath,
-      '-c:v', 'copy',
-      '-c:a', 'aac',
-      '-f', 'flv',
+      '-c:v', 'libx264', // Use H.264 codec
+      '-preset', 'veryfast', // Fast encoding
+      '-b:v', '2500k', // Video bitrate
+      '-maxrate', '2500k',
+      '-bufsize', '5000k',
+      '-c:a', 'aac', // Audio codec
+      '-b:a', '160k', // Audio bitrate
+      '-ar', '44100', // Audio sample rate
+      '-f', 'flv', // Output format
       rtmpUrl
     ]);
 
@@ -70,6 +77,13 @@ export async function startStreaming() {
     ffmpegProcess.on('error', (err: Error) => {
       console.error('FFmpeg Error:', err);
       stopStreaming();
+    });
+
+    ffmpegProcess.on('exit', (code: number) => {
+      console.log('FFmpeg process exited with code:', code);
+      if (code !== 0) {
+        stopStreaming();
+      }
     });
 
     currentStream = setInterval(() => {
@@ -96,7 +110,7 @@ export async function stopStreaming() {
   }
 
   if (ffmpegProcess) {
-    ffmpegProcess.kill();
+    ffmpegProcess.kill('SIGTERM');
     ffmpegProcess = null;
   }
 
