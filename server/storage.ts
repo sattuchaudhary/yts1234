@@ -1,4 +1,6 @@
 import { videos, streamSettings, type Video, type InsertVideo, type StreamSettings } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Video operations
@@ -7,85 +9,79 @@ export interface IStorage {
   createVideo(video: InsertVideo): Promise<Video>;
   setVideoActive(id: number, active: boolean): Promise<Video>;
   deleteVideo(id: number): Promise<void>;
-  
+
   // Stream settings operations
   getStreamSettings(): Promise<StreamSettings | undefined>;
   updateStreamSettings(settings: Partial<StreamSettings>): Promise<StreamSettings>;
 }
 
-export class MemStorage implements IStorage {
-  private videos: Map<number, Video>;
-  private streamSettings: StreamSettings | undefined;
-  private currentVideoId: number;
-  private currentSettingsId: number;
-
-  constructor() {
-    this.videos = new Map();
-    this.currentVideoId = 1;
-    this.currentSettingsId = 1;
-  }
-
+export class DatabaseStorage implements IStorage {
   async getVideos(): Promise<Video[]> {
-    return Array.from(this.videos.values());
+    return await db.select().from(videos);
   }
 
   async getVideo(id: number): Promise<Video | undefined> {
-    return this.videos.get(id);
-  }
-
-  async createVideo(insertVideo: InsertVideo): Promise<Video> {
-    const id = this.currentVideoId++;
-    const video: Video = {
-      ...insertVideo,
-      id,
-      active: false,
-      uploadedAt: new Date(),
-    };
-    this.videos.set(id, video);
+    const [video] = await db.select().from(videos).where(eq(videos.id, id));
     return video;
   }
 
+  async createVideo(video: InsertVideo): Promise<Video> {
+    const [newVideo] = await db.insert(videos).values(video).returning();
+    return newVideo;
+  }
+
   async setVideoActive(id: number, active: boolean): Promise<Video> {
-    const video = await this.getVideo(id);
-    if (!video) throw new Error("Video not found");
-    
     // Deactivate all other videos if this one is being activated
     if (active) {
-      for (const [videoId, existingVideo] of this.videos) {
-        if (videoId !== id && existingVideo.active) {
-          this.videos.set(videoId, { ...existingVideo, active: false });
-        }
-      }
+      await db
+        .update(videos)
+        .set({ active: false })
+        .where(eq(videos.active, true));
     }
-    
-    const updatedVideo = { ...video, active };
-    this.videos.set(id, updatedVideo);
+
+    const [updatedVideo] = await db
+      .update(videos)
+      .set({ active })
+      .where(eq(videos.id, id))
+      .returning();
+
+    if (!updatedVideo) {
+      throw new Error("Video not found");
+    }
+
     return updatedVideo;
   }
 
   async deleteVideo(id: number): Promise<void> {
-    this.videos.delete(id);
+    await db.delete(videos).where(eq(videos.id, id));
   }
 
   async getStreamSettings(): Promise<StreamSettings | undefined> {
-    return this.streamSettings;
+    const [settings] = await db.select().from(streamSettings);
+    return settings;
   }
 
   async updateStreamSettings(settings: Partial<StreamSettings>): Promise<StreamSettings> {
-    if (!this.streamSettings) {
-      this.streamSettings = {
-        id: this.currentSettingsId++,
-        youtubeStreamKey: settings.youtubeStreamKey || "",
-        active: settings.active || false,
-      };
-    } else {
-      this.streamSettings = {
-        ...this.streamSettings,
-        ...settings,
-      };
+    const currentSettings = await this.getStreamSettings();
+
+    if (!currentSettings) {
+      // Create new settings
+      const [newSettings] = await db
+        .insert(streamSettings)
+        .values(settings)
+        .returning();
+      return newSettings;
     }
-    return this.streamSettings;
+
+    // Update existing settings
+    const [updatedSettings] = await db
+      .update(streamSettings)
+      .set(settings)
+      .where(eq(streamSettings.id, currentSettings.id))
+      .returning();
+
+    return updatedSettings;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
