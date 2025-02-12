@@ -3,17 +3,24 @@ import type { Video, StreamSettings } from "@shared/schema";
 
 export async function uploadVideo(formData: FormData): Promise<Video> {
   console.log("Starting video upload...");
-  console.log("FormData entries:", Array.from(formData.entries()));
 
+  // Log the FormData contents
+  for (const [key, value] of formData.entries()) {
+    console.log(`FormData ${key}:`, value instanceof File ? `File: ${value.name}` : value);
+  }
+
+  // Use fetch directly for file upload instead of apiRequest
   const res = await fetch("/api/videos", {
     method: "POST",
+    // Don't set Content-Type header, let the browser set it with the boundary
     body: formData,
-    credentials: "include"
+    credentials: "include",
   });
 
   if (!res.ok) {
     const errorText = await res.text();
-    console.error("Upload failed:", errorText);
+    console.error("Upload failed with status:", res.status);
+    console.error("Error response:", errorText);
     throw new Error(errorText || "Failed to upload video");
   }
 

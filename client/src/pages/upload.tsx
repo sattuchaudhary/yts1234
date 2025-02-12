@@ -17,6 +17,7 @@ export default function UploadPage() {
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<string>("");
 
   const form = useForm({
     resolver: zodResolver(insertVideoSchema),
@@ -30,7 +31,7 @@ export default function UploadPage() {
     if (!selectedFile) {
       toast({
         title: "Error",
-        description: "Please select a video file",
+        description: "कृपया एक वीडियो फ़ाइल चुनें",
         variant: "destructive",
       });
       return;
@@ -39,42 +40,50 @@ export default function UploadPage() {
     if (!selectedFile.type.startsWith('video/')) {
       toast({
         title: "Error",
-        description: "Please select a valid video file",
+        description: "कृपया एक वैध वीडियो फ़ाइल चुनें",
         variant: "destructive",
       });
       return;
     }
 
     setUploading(true);
+    setUploadProgress("अपलोड शुरू हो रहा है...");
+
     try {
       const formData = new FormData();
       formData.append("title", data.title);
       formData.append("description", data.description || "");
       formData.append("video", selectedFile);
 
-      await uploadVideo(formData);
+      setUploadProgress("वीडियो अपलोड हो रहा है...");
+      console.log("Uploading video:", selectedFile.name);
+
+      const video = await uploadVideo(formData);
+      console.log("Upload successful:", video);
 
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       toast({
-        title: "Success",
-        description: "Video uploaded successfully",
+        title: "सफल",
+        description: "वीडियो सफलतापूर्वक अपलोड हो गया",
       });
       navigate("/");
     } catch (error) {
       console.error("Upload error:", error);
       toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to upload video",
+        title: "त्रुटि",
+        description: error instanceof Error ? error.message : "वीडियो अपलोड करने में विफल",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
+      setUploadProgress("");
     }
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      console.log("File selected:", file.name, file.type, file.size);
       setSelectedFile(file);
     }
   };
@@ -84,19 +93,19 @@ export default function UploadPage() {
       <Link href="/">
         <Button variant="ghost" className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Dashboard
+          डैशबोर्ड पर वापस जाएं
         </Button>
       </Link>
 
       <Card>
         <CardHeader>
-          <CardTitle>Upload Video</CardTitle>
+          <CardTitle>वीडियो अपलोड करें</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-2">
               <Input
-                placeholder="Video Title"
+                placeholder="वीडियो का शीर्षक"
                 {...form.register("title")}
               />
               {form.formState.errors.title && (
@@ -108,7 +117,7 @@ export default function UploadPage() {
 
             <div className="space-y-2">
               <Textarea
-                placeholder="Video Description"
+                placeholder="वीडियो का विवरण"
                 {...form.register("description")}
               />
               {form.formState.errors.description && (
@@ -127,8 +136,11 @@ export default function UploadPage() {
               />
               {selectedFile && (
                 <p className="text-sm text-muted-foreground">
-                  Selected file: {selectedFile.name}
+                  चयनित फ़ाइल: {selectedFile.name}
                 </p>
+              )}
+              {uploadProgress && (
+                <p className="text-sm text-blue-500">{uploadProgress}</p>
               )}
             </div>
 
@@ -138,7 +150,7 @@ export default function UploadPage() {
               className="w-full"
             >
               <Upload className="mr-2 h-4 w-4" />
-              {uploading ? "Uploading..." : "Upload Video"}
+              {uploading ? "अपलोड हो रहा है..." : "वीडियो अपलोड करें"}
             </Button>
           </form>
         </CardContent>
