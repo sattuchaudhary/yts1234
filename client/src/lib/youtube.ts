@@ -2,16 +2,21 @@ import { apiRequest } from "./queryClient";
 import type { Video, StreamSettings } from "@shared/schema";
 
 export async function uploadVideo(formData: FormData): Promise<Video> {
+  console.log("Starting video upload...");
+  console.log("FormData entries:", Array.from(formData.entries()));
+
   const res = await fetch("/api/videos", {
     method: "POST",
     body: formData,
     credentials: "include"
   });
-  
+
   if (!res.ok) {
-    throw new Error("Failed to upload video");
+    const errorText = await res.text();
+    console.error("Upload failed:", errorText);
+    throw new Error(errorText || "Failed to upload video");
   }
-  
+
   return res.json();
 }
 

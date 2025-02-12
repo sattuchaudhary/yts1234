@@ -44,10 +44,24 @@ export function registerRoutes(app: Express): Server {
 
   app.post("/api/videos", upload.single("video"), async (req, res) => {
     try {
+      console.log("Received upload request:", {
+        body: req.body,
+        file: req.file,
+        contentType: req.headers['content-type']
+      });
+
       if (!req.file) {
-        res.status(400).json({ error: "No video file uploaded" });
+        const error = "No video file uploaded";
+        console.error(error);
+        res.status(400).json({ error });
         return;
       }
+
+      console.log("File received:", {
+        filename: req.file.filename,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      });
 
       const result = insertVideoSchema.safeParse({
         title: req.body.title,
@@ -56,15 +70,22 @@ export function registerRoutes(app: Express): Server {
       });
 
       if (!result.success) {
-        res.status(400).json({ error: result.error.message });
+        const error = result.error.message;
+        console.error("Validation error:", error);
+        res.status(400).json({ error });
         return;
       }
 
+      console.log("Creating video record with data:", result.data);
       const video = await storage.createVideo(result.data);
+      console.log("Video record created:", video);
+
       res.json(video);
     } catch (error) {
-      console.error("Error uploading video:", error);
-      res.status(500).json({ error: "Failed to upload video" });
+      console.error("Error in video upload:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to upload video" 
+      });
     }
   });
 
