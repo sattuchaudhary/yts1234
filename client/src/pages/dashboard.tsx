@@ -39,8 +39,8 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/stream-settings"] });
       toast({
-        title: "सेटिंग्स अपडेट हुई",
-        description: "आपकी स्ट्रीम सेटिंग्स सेव हो गई हैं।",
+        title: "Settings Updated",
+        description: "Your stream settings have been saved.",
       });
     },
   });
@@ -50,8 +50,8 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/stream/status"] });
       toast({
-        title: "स्ट्रीम शुरू हुई",
-        description: "आपकी स्ट्रीम YouTube पर लाइव है।",
+        title: "Stream Started",
+        description: "Your stream is now live on YouTube.",
       });
     },
   });
@@ -61,8 +61,8 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/stream/status"] });
       toast({
-        title: "स्ट्रीम रुकी",
-        description: "आपकी स्ट्रीम रोक दी गई है।",
+        title: "Stream Stopped",
+        description: "Your stream has been stopped.",
       });
     },
   });
@@ -72,8 +72,8 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       toast({
-        title: "वीडियो हटाई गई",
-        description: "वीडियो सफलतापूर्वक हटा दी गई है।",
+        title: "Video Deleted",
+        description: "Video has been successfully deleted.",
       });
     },
   });
@@ -83,8 +83,8 @@ export default function Dashboard() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       toast({
-        title: "वीडियो चुनी गई",
-        description: "स्ट्रीमिंग के लिए वीडियो चुन ली गई है।",
+        title: "Video Selected",
+        description: "Video has been selected for streaming.",
       });
     },
   });
@@ -93,8 +93,8 @@ export default function Dashboard() {
     const activeVideo = videos.find(v => v.active);
     if (!activeVideo) {
       toast({
-        title: "त्रुटि",
-        description: "कृपया पहले स्ट्रीम करने के लिए एक वीडियो चुनें।",
+        title: "Error",
+        description: "Please select a video to stream first.",
         variant: "destructive",
       });
       return;
@@ -105,11 +105,11 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">स्ट्रीम डैशबोर्ड</h1>
+        <h1 className="text-3xl font-bold">Stream Dashboard</h1>
         <Link href="/upload">
           <Button>
             <Upload className="mr-2 h-4 w-4" />
-            वीडियो अपलोड करें
+            Upload Video
           </Button>
         </Link>
       </div>
@@ -117,7 +117,7 @@ export default function Dashboard() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>स्ट्रीम नियंत्रण</CardTitle>
+            <CardTitle>Stream Controls</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -128,7 +128,7 @@ export default function Dashboard() {
                   className="w-full bg-red-600 hover:bg-red-700"
                 >
                   <Play className="mr-2 h-4 w-4" />
-                  स्ट्रीम शुरू करें
+                  Start Stream
                 </Button>
                 <Button
                   onClick={() => stopStreamMutation.mutate()}
@@ -137,14 +137,14 @@ export default function Dashboard() {
                   className="w-full"
                 >
                   <Square className="mr-2 h-4 w-4" />
-                  स्ट्रीम रोकें
+                  Stop Stream
                 </Button>
               </div>
 
               <div className="flex items-center gap-2">
                 <div className={`h-3 w-3 rounded-full ${streamStatus.isStreaming ? 'bg-green-500' : 'bg-gray-300'}`} />
                 <span className="text-sm text-gray-600">
-                  {streamStatus.isStreaming ? 'स्ट्रीमिंग चल रही है' : 'ऑफलाइन'}
+                  {streamStatus.isStreaming ? 'Streaming' : 'Offline'}
                 </span>
               </div>
             </div>
@@ -153,14 +153,14 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>स्ट्रीम सेटिंग्स</CardTitle>
+            <CardTitle>Stream Settings</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={form.handleSubmit((data) => updateSettingsMutation.mutate(data))} className="space-y-4">
               <div className="space-y-2">
                 <Input
                   type="password"
-                  placeholder="YouTube स्ट्रीम की"
+                  placeholder="YouTube Stream Key"
                   {...form.register("youtubeStreamKey")}
                 />
                 {form.formState.errors.youtubeStreamKey && (
@@ -171,7 +171,7 @@ export default function Dashboard() {
               </div>
               <Button type="submit" disabled={updateSettingsMutation.isPending}>
                 <Settings className="mr-2 h-4 w-4" />
-                सेटिंग्स सेव करें
+                Save Settings
               </Button>
             </form>
           </CardContent>
@@ -180,7 +180,7 @@ export default function Dashboard() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>वीडियो</CardTitle>
+          <CardTitle>Videos</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
@@ -193,7 +193,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2">
                       <div className={`h-2 w-2 rounded-full ${video.active ? 'bg-green-500' : 'bg-gray-300'}`} />
                       <span className="text-sm text-gray-600">
-                        {video.active ? 'चयनित' : 'अचयनित'}
+                        {video.active ? 'Selected' : 'Not Selected'}
                       </span>
                     </div>
                     <div className="flex gap-2">

@@ -2,9 +2,11 @@ import NodeMediaServer from "node-media-server";
 import { storage } from "./storage";
 import fs from "fs/promises";
 import path from "path";
+import { spawn } from "child_process";
 
 let nms: NodeMediaServer;
 let currentStream: NodeJS.Timer | null = null;
+let ffmpegProcess: any = null;
 
 export function initializeMediaServer() {
   const config = {
@@ -44,26 +46,47 @@ export async function startStreaming() {
     throw new Error("No active video selected");
   }
 
-  // Start RTMP stream to YouTube
+  // Start RTMP stream to YouTube using ffmpeg
   const rtmpUrl = `rtmp://a.rtmp.youtube.com/live2/${settings.youtubeStreamKey}`;
-  
-  // Start continuous streaming loop
-  currentStream = setInterval(async () => {
-    try {
-      const session = nms.nodeRelaySession({
-        ffmpeg: process.env.FFMPEG_PATH || 'ffmpeg',
-        inPath: activeVideo.filePath,
-        outPath: rtmpUrl
-      });
-      
-      session.run();
-    } catch (error) {
-      console.error("Streaming error:", error);
-      await stopStreaming();
-    }
-  }, 100);
 
-  await storage.updateStreamSettings({ ...settings, active: true });
+  try {
+    if (ffmpegProcess) {
+      ffmpegProcess.kill();
+    }
+
+    ffmpegProcess = spawn('ffmpeg', [
+      '-re',
+      '-i', activeVideo.filePath,
+      '-c:v', 'copy',
+      '-c:a', 'aac',
+      '-f', 'flv',
+      rtmpUrl
+    ]);
+
+    ffmpegProcess.stderr.on('data', (data: Buffer) => {
+      console.log('FFmpeg Log:', data.toString());
+    });
+
+    ffmpegProcess.on('error', (err: Error) => {
+      console.error('FFmpeg Error:', err);
+      stopStreaming();
+    });
+
+    currentStream = setInterval(() => {
+      // Keep alive check
+      if (ffmpegProcess && ffmpegProcess.exitCode !== null) {
+        console.log('FFmpeg process exited, restarting...');
+        stopStreaming();
+        startStreaming();
+      }
+    }, 5000);
+
+    await storage.updateStreamSettings({ ...settings, active: true });
+  } catch (error) {
+    console.error("Streaming error:", error);
+    await stopStreaming();
+    throw error;
+  }
 }
 
 export async function stopStreaming() {
@@ -71,7 +94,12 @@ export async function stopStreaming() {
     clearInterval(currentStream);
     currentStream = null;
   }
-  
+
+  if (ffmpegProcess) {
+    ffmpegProcess.kill();
+    ffmpegProcess = null;
+  }
+
   const settings = await storage.getStreamSettings();
   if (settings) {
     await storage.updateStreamSettings({ ...settings, active: false });
@@ -80,6 +108,6 @@ export async function stopStreaming() {
 
 export function getStreamStatus() {
   return {
-    isStreaming: currentStream !== null
+    isStreaming: currentStream !== null && ffmpegProcess !== null
   };
 }
