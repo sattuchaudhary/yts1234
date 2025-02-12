@@ -16,6 +16,7 @@ export default function UploadPage() {
   const [_, navigate] = useLocation();
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const form = useForm({
     resolver: zodResolver(insertVideoSchema),
@@ -26,13 +27,19 @@ export default function UploadPage() {
   });
 
   async function onSubmit(data: { title: string; description: string }) {
-    const fileInput = document.querySelector<HTMLInputElement>('input[type="file"]');
-    const file = fileInput?.files?.[0];
-    
-    if (!file) {
+    if (!selectedFile) {
       toast({
         title: "Error",
         description: "Please select a video file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!selectedFile.type.startsWith('video/')) {
+      toast({
+        title: "Error",
+        description: "Please select a valid video file",
         variant: "destructive",
       });
       return;
@@ -43,10 +50,10 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append("title", data.title);
       formData.append("description", data.description || "");
-      formData.append("video", file);
+      formData.append("video", selectedFile);
 
       await uploadVideo(formData);
-      
+
       queryClient.invalidateQueries({ queryKey: ["/api/videos"] });
       toast({
         title: "Success",
@@ -54,15 +61,23 @@ export default function UploadPage() {
       });
       navigate("/");
     } catch (error) {
+      console.error("Upload error:", error);
       toast({
         title: "Error",
-        description: "Failed to upload video",
+        description: error instanceof Error ? error.message : "Failed to upload video",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
     }
   }
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+    }
+  };
 
   return (
     <div className="container mx-auto p-6">
@@ -107,10 +122,21 @@ export default function UploadPage() {
               <Input
                 type="file"
                 accept="video/*"
+                onChange={handleFileChange}
+                className="cursor-pointer"
               />
+              {selectedFile && (
+                <p className="text-sm text-muted-foreground">
+                  Selected file: {selectedFile.name}
+                </p>
+              )}
             </div>
 
-            <Button type="submit" disabled={uploading} className="w-full">
+            <Button 
+              type="submit" 
+              disabled={uploading || !selectedFile} 
+              className="w-full"
+            >
               <Upload className="mr-2 h-4 w-4" />
               {uploading ? "Uploading..." : "Upload Video"}
             </Button>
